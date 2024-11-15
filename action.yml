@@ -1,0 +1,64 @@
+name: .NET Restore
+description: An opinionated action that restore the dependencies for specified projects or the solution itself.
+inputs:
+  projects:
+    description: Optional path to the project(s) file to restore. Pass empty to restore all dependencies and tools of a solution. Supports globbing.
+    required: true
+    default: '**/*.csproj'
+  level:
+    description: Sets the verbosity level of the command. Allowed values are q[uiet], m[inimal], n[ormal], d[etailed], and diag[nostic]. The default is quiet.
+    required: true
+    default: 'quiet'
+  useRestoreCache:
+    description: Whether to use the restore cache or not. Default is not to use the restore cache.
+    required: false
+    default: 'false'
+  restoreCacheKey:
+    description: Allows for a custom provided key that will be used instead of the default implementation.
+    required: false
+    default: ''
+outputs:
+  restoreCacheKey:
+    description: The restore cache key that can be used by other actions.
+    value: ${{ steps.generate-restore-cache-key.outputs.key }}
+runs:
+  using: composite
+  steps:
+    - if: inputs.useRestoreCache == 'true'
+      id: generate-restore-cache-key
+      run: |
+        sanitizedKey=${{ inputs.restoreCacheKey }}
+        sanitizedKey=${sanitizedKey/dotnet-restore-/}  # Remove "dotnet-restore-" if it exists
+        key=dotnet-restore-${sanitizedKey}
+        if [ "$sanitizedKey" == "" ]; then
+          key=dotnet-restore-${{ hashFiles('**/*.csproj', '**/*.cs') }}
+        fi
+        echo "key=$key" >> $GITHUB_OUTPUT
+      shell: bash
+    - if: inputs.useRestoreCache == 'true'
+      name: Cache Files
+      id: cache-dotnet-restore
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}
+          !${{ github.workspace }}/.git
+          ~/.nuget/packages
+        key: ${{ steps.generate-restore-cache-key.outputs.key }}
+        enableCrossOsArchive: true
+    - if: inputs.useRestoreCache == 'false' || steps.cache-dotnet-restore.outputs.cache-hit != 'true'
+      name: Restore
+      run: |
+        if [ "${{ inputs.projects }}" == "" ]; then
+            dotnet restore --verbosity ${{ inputs.level }}
+        else
+            shopt -s globstar extglob
+            for file in ${{ inputs.projects }}; do
+              dotnet restore $file --verbosity ${{ inputs.level }}
+              echo "Restored '$file'"
+            done
+        fi
+      shell: bash
+branding:
+  icon: 'umbrella'
+  color: 'blue'
