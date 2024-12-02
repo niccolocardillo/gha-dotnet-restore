@@ -7,16 +7,16 @@ inputs:
     default: '**/*.csproj'
   level:
     description: Sets the verbosity level of the command. Allowed values are q[uiet], m[inimal], n[ormal], d[etailed], and diag[nostic]. The default is quiet.
-    required: true
-    default: 'quiet'
-  useRestoreCache:
-    description: Whether to use the restore cache or not. Default is not to use the restore cache.
     required: false
-    default: 'false'
+    default: 'quiet'
   restoreCacheKey:
     description: Allows for a custom provided key that will be used instead of the default implementation.
     required: false
     default: ''
+  useRestoreCache:
+    description: Whether to use the restore cache or not. Default is not to use the restore cache.
+    required: false
+    default: 'false'
 outputs:
   restoreCacheKey:
     description: The restore cache key that can be used by other actions.
